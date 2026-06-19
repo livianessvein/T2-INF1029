@@ -2,11 +2,11 @@
  * @file gpu_lib.cu
  * @brief Biblioteca de eliminação gaussiana com suporte a multithread (host) e GPU (CUDA).
  *
- * Implementa duas versões da função processaVetores:
+ * Implementa duas versões da funcao processaVetores:
  * - processaVetoresThread: eliminação gaussiana multithread no host usando pthreads.
  * - processaVetoresGPU: eliminação gaussiana acelerada na GPU usando CUDA.
  *
- * A operação realizada é a triangularização superior da matriz A aumentada [A|b],
+ * A operação realizada eh a triangularização superior da matriz A aumentada [A|b],
  * preservando o sistema de equações lineares para posterior resolução por
  * substituição regressiva.
  *
@@ -34,14 +34,14 @@
 #include "gpu.h"
 
 /* =========================================================================
- * SEÇÃO 1 – Versão Multithread no Host (pthreads)
+ * SEÇÃO 1 – Versao Multithread no Host (pthreads)
  * =========================================================================
  *
- * Estratégia:
- *   Para cada passo k (linha pivô k-1), as linhas k..n-1 precisam ser
+ * Estrategia:
+ *   Para cada passo k (linha pivo k-1), as linhas k..n-1 precisam ser
  *   atualizadas. Dividimos essas linhas igualmente entre as nThreads threads.
  *   Cada thread recebe um subconjunto de linhas, calcula o multiplicador e
- *   subtrai a linha pivô multiplicada.
+ *   subtrai a linha pivo multiplicada.
  *
  *   A sincronização é feita no host: o loop principal (passo) avança apenas
  *   após todas as threads terminarem o passo anterior (pthread_join).
@@ -49,10 +49,10 @@
  */
 
 /**
- * @brief Função executada por cada thread worker na versão host.
+ * @brief Funcao executada por cada thread worker na versão host.
  *
  * Cada thread processa um subconjunto de linhas no passo atual da eliminação
- * gaussiana. A linha pivô é passo-1; as linhas abaixo dela são divididas
+ * gaussiana. A linha pivo é passo-1; as linhas abaixo dela são divididas
  * ciclicamente entre as threads (thread i processa linhas i, i+nThreads, …).
  *
  * @param arg  Ponteiro para threadArgs_t com os parâmetros da thread.
