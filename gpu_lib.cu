@@ -49,37 +49,29 @@
  */
 
 /**
- * @brief Argumento passado a cada thread worker da versão host.
- */
-typedef struct {
-    int       threadId;     /**< Identificador da thread (0..nThreads-1) */
-    data_t   *hmA;          /**< Ponteiro para a matriz A no host (row-major) */
-    data_t   *hvB;          /**< Ponteiro para o vetor b no host */
-    int       nIncognitas;  /**< Dimensão do sistema (n x n) */
-    int       passo;        /**< Passo atual da eliminação (linha pivô = passo-1) */
-    int       nThreads;     /**< Total de threads em uso */
-} workerArgs_t;
-
-/**
  * @brief Função executada por cada thread worker na versão host.
  *
  * Cada thread processa um subconjunto de linhas no passo atual da eliminação
  * gaussiana. A linha pivô é passo-1; as linhas abaixo dela são divididas
  * ciclicamente entre as threads (thread i processa linhas i, i+nThreads, …).
  *
- * @param arg  Ponteiro para workerArgs_t com os parâmetros da thread.
+ * @param arg  Ponteiro para threadArgs_t com os parâmetros da thread.
  * @return     NULL (sem retorno útil).
  */
 static void *gaussWorker(void *arg) {
-    workerArgs_t *a         = (workerArgs_t *)arg;
-    int           id        = a->threadId;
-    int           n         = a->nIncognitas;
-    int           passo     = a->passo;
-    int           nT        = a->nThreads;
-    data_t       *mA        = a->hmA;
-    data_t       *vB        = a->hvB;
+    threadArgs_t *a = (threadArgs_t *)arg;
 
-    int pivô = passo - 1;  /* índice da linha pivô */
+    int id        = a->threadId;
+    int n         = a->nIncognitas;
+    int passo     = a->passo;
+
+    extern int nThreads;
+    int nT        = nThreads;
+
+    data_t *mA    = a->hmA;
+    data_t *vB    = a->hvB;
+
+    int pivo = passo - 1;
 
     /* Cada thread trata linhas: passo + id, passo + id + nT, ... */
     for (int linha = passo + id; linha < n; linha += nT) {
@@ -117,7 +109,7 @@ void processaVetoresThread(data_t *hmA, data_t *hvB, int nIncognitas) {
     int nT = nThreads;
 
     pthread_t    *threads = (pthread_t *)   malloc(nT * sizeof(pthread_t));
-    workerArgs_t *args    = (workerArgs_t *)malloc(nT * sizeof(workerArgs_t));
+    threadArgs_t *args    = (threadArgs_t *)malloc(nT * sizeof(threadArgs_t));
 
     if (!threads || !args) {
         fprintf(stderr, "[ERROR] processaVetoresThread: falha ao alocar estruturas de threads\n");
@@ -132,7 +124,6 @@ void processaVetoresThread(data_t *hmA, data_t *hvB, int nIncognitas) {
             args[t].hvB         = hvB;
             args[t].nIncognitas = nIncognitas;
             args[t].passo       = passo;
-            args[t].nThreads    = nT;
 
             if (pthread_create(&threads[t], NULL, gaussWorker, &args[t]) != 0) {
                 fprintf(stderr, "[ERROR 5] processaVetoresThread: falha em pthread_create (thread %d, passo %d)\n", t, passo);
