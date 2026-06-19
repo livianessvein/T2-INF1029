@@ -75,11 +75,11 @@ static void *gaussWorker(void *arg) {
 
     /* Cada thread trata linhas: passo + id, passo + id + nT, ... */
     for (int linha = passo + id; linha < n; linha += nT) {
-        data_t mult = matriz(mA, linha, pivô, n) / matriz(mA, pivô, pivô, n);
-        for (int col = pivô; col < n; col++) {
-            matriz(mA, linha, col, n) -= matriz(mA, pivô, col, n) * mult;
+        data_t mult = matriz(mA, linha, pivo, n) / matriz(mA, pivo, pivo, n);
+        for (int col = pivo; col < n; col++) {
+            matriz(mA, linha, col, n) -= matriz(mA, pivo, col, n) * mult;
         }
-        vB[linha] -= vB[pivô] * mult;
+        vB[linha] -= vB[pivo] * mult;
     }
 
     return NULL;
@@ -186,17 +186,17 @@ __global__ void gaussStepKernel(data_t *dmA, data_t *dvB, int n, int passo) {
 
     if (linha >= n || coluna >= n) return;
 
-    int pivô = passo - 1;
+    int pivo = passo - 1;
 
     /* Calcula o multiplicador (cada thread da mesma linha lê o mesmo valor) */
-    data_t mult = dmA[linha * n + pivô] / dmA[pivô * n + pivô];
+    data_t mult = dmA[linha * n + pivo] / dmA[pivo * n + pivo];
 
     /* Atualiza o elemento da matriz */
-    dmA[linha * n + coluna] -= dmA[pivô * n + coluna] * mult;
+    dmA[linha * n + coluna] -= dmA[pivo * n + coluna] * mult;
 
     /* Somente a thread da coluna 0 atualiza o vetor b */
     if (coluna == 0) {
-        dvB[linha] -= dvB[pivô] * mult;
+        dvB[linha] -= dvB[pivo] * mult;
     }
 }
 
