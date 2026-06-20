@@ -10,7 +10,7 @@
  * preservando o sistema de equações lineares para posterior resolução por
  * substituição regressiva.
  *
- * @author  (Grupo)
+ * @author  (Livian Essvein 2211667 e Breno Lois 2210780)
  * @date    2026
  *
  * @section Códigos de Erro
@@ -73,7 +73,6 @@ static void *gaussWorker(void *arg) {
 
     int pivo = passo - 1;
 
-    /* Cada thread trata linhas: passo + id, passo + id + nT, ... */
     for (int linha = passo + id; linha < n; linha += nT) {
         data_t mult = matriz(mA, linha, pivo, n) / matriz(mA, pivo, pivo, n);
         for (int col = pivo; col < n; col++) {
@@ -131,7 +130,6 @@ void processaVetoresThread(data_t *hmA, data_t *hvB, int nIncognitas) {
             }
         }
 
-        /* Aguarda todas as threads terminarem antes do próximo passo */
         for (int t = 0; t < nT; t++) {
             if (pthread_join(threads[t], NULL) != 0) {
                 fprintf(stderr, "[ERROR 6] processaVetoresThread: falha em pthread_join (thread %d, passo %d)\n", t, passo);
@@ -179,22 +177,17 @@ void processaVetoresThread(data_t *hmA, data_t *hvB, int nIncognitas) {
  * @param passo       Passo atual (linha pivô = passo-1).
  */
 __global__ void gaussStepKernel(data_t *dmA, data_t *dvB, int n, int passo) {
-    /* Índice global de linha: linhas abaixo do pivô */
     int linha  = blockIdx.y * blockDim.y + threadIdx.y + passo;
-    /* Índice global de coluna */
     int coluna = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (linha >= n || coluna >= n) return;
 
     int pivo = passo - 1;
 
-    /* Calcula o multiplicador (cada thread da mesma linha lê o mesmo valor) */
     data_t mult = dmA[linha * n + pivo] / dmA[pivo * n + pivo];
 
-    /* Atualiza o elemento da matriz */
     dmA[linha * n + coluna] -= dmA[pivo * n + coluna] * mult;
 
-    /* Somente a thread da coluna 0 atualiza o vetor b */
     if (coluna == 0) {
         dvB[linha] -= dvB[pivo] * mult;
     }
@@ -245,14 +238,12 @@ void processaVetoresGPU(data_t *hmA, data_t *hvB, int nIncognitas) {
 
     int n = nIncognitas;
 
-    /* ---- Aloca memória no device ---- */
     data_t *dmA = NULL;
     data_t *dvB = NULL;
 
     CUDA_CHECK(cudaMalloc((void **)&dmA, sizeof(data_t) * n * n), 2);
     CUDA_CHECK(cudaMalloc((void **)&dvB, sizeof(data_t) * n),     2);
 
-    /* ---- Copia dados do host para o device ---- */
     CUDA_CHECK(cudaMemcpy(dmA, hmA, sizeof(data_t) * n * n, cudaMemcpyHostToDevice), 3);
     CUDA_CHECK(cudaMemcpy(dvB, hvB, sizeof(data_t) * n,     cudaMemcpyHostToDevice), 3);
 
